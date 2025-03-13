@@ -1,13 +1,31 @@
 #include "gia.h"
 
 #include <iostream>
+#include <fstream>
 #include <boost/log/trivial.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/console.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 
+constexpr int16_t PORT = 32700;
+constexpr int32_t THREAD_POOL_SIZE = 8;
+constexpr int32_t MAX_BUFFER_SIZE = 65536;
+
 namespace gia
 {
+    namespace data
+    {
+        std::optional<nlohmann::json> loadJson(const char* path)
+        {
+            std::ifstream f(path);
+            if (!f) 
+            {
+                return std::nullopt;
+            }
+            return nlohmann::json::parse(f);       
+        }
+    }
+
     std::string make_http_response(const std::string& context)
     {
         const std::string response_body = context;
