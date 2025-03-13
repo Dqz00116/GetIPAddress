@@ -10,10 +10,6 @@ int main()
     {
         boost::asio::io_context io_context;
         gia::server srv(io_context, PORT, MAX_BUFFER_SIZE, THREAD_POOL_SIZE);
-        
-        std::cout << "Server started on port " << PORT 
-                  << " with " << THREAD_POOL_SIZE << " worker threads\n";
-             
         srv.run();
     }
     catch (const std::exception& e)

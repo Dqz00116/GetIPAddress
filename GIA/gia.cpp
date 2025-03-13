@@ -1,6 +1,10 @@
 #include "gia.h"
 
 #include <iostream>
+#include <boost/log/trivial.hpp>
+#include <boost/log/utility/setup/file.hpp>
+#include <boost/log/utility/setup/console.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
 
 namespace gia
 {
@@ -26,7 +30,7 @@ namespace gia
             {
                 if (ec)
                 {
-                    std::cerr << "Read error: " << ec.message() << std::endl;
+                    BOOST_LOG_TRIVIAL(error) << "Read error: " << ec.message();
                     return;
                 }
                 
@@ -41,6 +45,9 @@ namespace gia
                         {
                             if (!ec)
                             {
+                                BOOST_LOG_TRIVIAL(info) << "Receive request from "
+                                    << self->m_socket.remote_endpoint().address().to_string() << ".";
+                                
                                 boost::system::error_code ignore_ec;
                                 self->m_socket.shutdown(b_tcp::socket::shutdown_both, ignore_ec);
                             }
@@ -48,13 +55,34 @@ namespace gia
                 }
                 catch (const std::exception& e)
                 {
-                    std::cerr << "Error: " << e.what() << std::endl;
+                    BOOST_LOG_TRIVIAL(error) << "Error: " << e.what();
                 }
             });
     }
 
+    void server::init_logger() noexcept
+    {
+        boost::log::add_console_log(std::cout,
+                boost::log::keywords::format = "[%TimeStamp%] [%Severity%]: %Message%"
+            );
+        
+        boost::log::add_file_log(
+            boost::log::keywords::file_name = "log_%N.log",
+            boost::log::keywords::rotation_size = 10 * 1024 * 1024,
+            boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
+            boost::log::keywords::format = "[%TimeStamp%] [%Severity%]: %Message%",
+            boost::log::keywords::auto_flush = true
+        );
+        
+        boost::log::add_common_attributes();
+    }
+
     void server::run()
     {
+
+        BOOST_LOG_TRIVIAL(info) << "Server started on port " << m_port 
+                 << " with " << m_thread_pool_size << " worker threads";
+        
         std::vector<std::thread> threads;
         for(size_t i = 0; i < m_thread_pool_size; ++i)
         {
@@ -83,7 +111,7 @@ namespace gia
                     return;
                 }
                 
-                std::cerr << "Accept error: " << ec.message() << std::endl;
+                BOOST_LOG_TRIVIAL(error) << "Accept error: " << ec.message();
                 start_accept();
                 return;
             }
