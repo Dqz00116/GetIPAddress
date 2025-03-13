@@ -24,6 +24,7 @@ namespace gia
     {
     public:
         server(boost::asio::io_context& io_context, int16_t port, int32_t buffer_size, int32_t thread_pool_size) :
+            m_port(port),
             m_io_context(io_context),
             m_acceptor(io_context, b_tcp::endpoint(b_tcp::v4(), port)),
             m_thread_pool_size(thread_pool_size)
@@ -32,6 +33,7 @@ namespace gia
             m_acceptor.set_option(boost::asio::socket_base::receive_buffer_size(buffer_size));
             m_acceptor.set_option(boost::asio::socket_base::send_buffer_size(buffer_size));
             
+            init_logger();
             start_accept();
         }
 
@@ -40,6 +42,8 @@ namespace gia
             m_acceptor.close();
             m_io_context.stop();
         }
+
+        void init_logger() noexcept;
         
         void run();
         
@@ -49,5 +53,6 @@ namespace gia
         b_tcp::acceptor m_acceptor;
         boost::asio::io_context& m_io_context;
         int32_t m_thread_pool_size {0};
+        int16_t m_port {0};
     };
 }
