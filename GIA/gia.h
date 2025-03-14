@@ -2,6 +2,7 @@
 
 #include "json.hpp"
 #include <optional>
+#include <set>
 #include <boost/asio.hpp>
 
 namespace gia
@@ -11,38 +12,42 @@ namespace gia
         std::optional<nlohmann::json> loadJson(const char* path);    
     }
     
-    typedef boost::asio::ip::tcp b_tcp;
+    typedef boost::asio::ip::tcp boost_tcp;
 
     static std::string make_http_response(const std::string& context);
     
     class session : public std::enable_shared_from_this<session>
     {
     public:
-        session(b_tcp::socket socket) : m_socket(std::move(socket)) {}
+        session(boost_tcp::socket socket, const std::set<std::string>& white_liet) :
+        m_socket(std::move(socket)), m_map_ref(white_liet) {}
         
         void start();
 
     private:
-        b_tcp::socket m_socket ;
+        boost_tcp::socket m_socket ;
         boost::asio::streambuf m_buffer;
+        const std::set<std::string>& m_map_ref;
     };
 
     class server
     {
     public:
-        server(boost::asio::io_context& io_context, int16_t port, int32_t buffer_size, int32_t thread_pool_size) :
-            m_port(port),
-            m_io_context(io_context),
-            m_acceptor(io_context, b_tcp::endpoint(b_tcp::v4(), port)),
-            m_thread_pool_size(thread_pool_size)
+        explicit server(boost::asio::io_context& io_context, const nlohmann::json& config) : m_io_context(io_context), m_acceptor(io_context) 
         {
-            m_acceptor.set_option(b_tcp::acceptor::reuse_address(true));
-            m_acceptor.set_option(boost::asio::socket_base::receive_buffer_size(buffer_size));
-            m_acceptor.set_option(boost::asio::socket_base::send_buffer_size(buffer_size));
+            setup(config);
+            
+            m_acceptor.open(boost_tcp::v4());
+            m_acceptor.bind(boost_tcp::endpoint(boost_tcp::v4(), m_port));
+            m_acceptor.listen(boost::asio::socket_base::max_listen_connections);
+            
+            m_acceptor.set_option(boost_tcp::acceptor::reuse_address(true));
+            m_acceptor.set_option(boost::asio::socket_base::receive_buffer_size(m_max_buffer_size));
+            m_acceptor.set_option(boost::asio::socket_base::send_buffer_size(m_max_buffer_size));
             
             init_logger();
             start_accept();
-        }
+        } 
 
         ~server()
         {
@@ -50,16 +55,20 @@ namespace gia
             m_io_context.stop();
         }
 
-        void init_logger() noexcept;
-        
+        const std::set<std::string>& getWitheList();
         void run();
         
     private:
+        void init_logger() noexcept;
+        void setup(const nlohmann::json& config);
         void start_accept();
         
-        b_tcp::acceptor m_acceptor;
-        boost::asio::io_context& m_io_context;
-        int32_t m_thread_pool_size {0};
         int16_t m_port {0};
+        int32_t m_thread_pool_size {0};
+        int32_t m_max_buffer_size {0};
+        
+        boost_tcp::acceptor m_acceptor;
+        boost::asio::io_context& m_io_context;
+        std::set<std::string> m_white_list;
     };
 }

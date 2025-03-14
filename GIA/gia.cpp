@@ -54,8 +54,10 @@ namespace gia
                 
                 try
                 {
-                    std::string ip = m_socket.remote_endpoint().address().to_string();
-                    std::string response = make_http_response(ip);
+                    const auto ip = m_socket.remote_endpoint().address().to_string();
+                    const auto context = std::to_string(self->m_map_ref.contains(ip));    
+                    std::string response = make_http_response(context);
+                    
                     auto resp_ptr = std::make_shared<std::string>(std::move(response));
                     boost::asio::async_write(
                         m_socket, boost::asio::buffer(*resp_ptr),
@@ -67,7 +69,7 @@ namespace gia
                                     << self->m_socket.remote_endpoint().address().to_string() << ".";
                                 
                                 boost::system::error_code ignore_ec;
-                                self->m_socket.shutdown(b_tcp::socket::shutdown_both, ignore_ec);
+                                self->m_socket.shutdown(boost_tcp::socket::shutdown_both, ignore_ec);
                             }
                         });
                 }
@@ -76,6 +78,14 @@ namespace gia
                     BOOST_LOG_TRIVIAL(error) << "Error: " << e.what();
                 }
             });
+    }
+
+    void server::setup(const nlohmann::json& config)
+    {
+        m_port = config.value("port", PORT);
+        m_thread_pool_size = config.value("thread_pool_size", THREAD_POOL_SIZE);
+        m_max_buffer_size = config.value("max_buffer_size", MAX_BUFFER_SIZE);
+        m_white_list = config.value("white_list", std::set<std::string>{});
     }
 
     void server::init_logger() noexcept
@@ -93,6 +103,11 @@ namespace gia
         );
         
         boost::log::add_common_attributes();
+    }
+
+    const std::set<std::string>& server::getWitheList()
+    {
+        return m_white_list;
     }
 
     void server::run()
@@ -134,7 +149,7 @@ namespace gia
                 return;
             }
             
-            std::make_shared<session>(std::move(socket))->start();
+            std::make_shared<session>(std::move(socket), getWitheList())->start();
             start_accept();
         });
     }
