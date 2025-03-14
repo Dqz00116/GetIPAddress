@@ -1,9 +1,16 @@
 #pragma once
 
+#include "json.hpp"
+#include <optional>
 #include <boost/asio.hpp>
 
 namespace gia
 {
+    namespace data
+    {
+        std::optional<nlohmann::json> loadJson(const char* path);    
+    }
+    
     typedef boost::asio::ip::tcp b_tcp;
 
     static std::string make_http_response(const std::string& context);
