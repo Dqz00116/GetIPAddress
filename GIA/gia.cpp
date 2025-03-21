@@ -55,18 +55,20 @@ namespace gia
                 try
                 {
                     const auto ip = m_socket.remote_endpoint().address().to_string();
-                    const auto context = std::to_string(self->m_map_ref.contains(ip));    
+                    const bool bInWhiteList = self->m_map_ref.contains(ip);
+                    const auto context = std::to_string(bInWhiteList);    
                     std::string response = make_http_response(context);
                     
                     auto resp_ptr = std::make_shared<std::string>(std::move(response));
                     boost::asio::async_write(
                         m_socket, boost::asio::buffer(*resp_ptr),
-                        [self, resp_ptr](boost::system::error_code ec, std::size_t)
+                        [self, resp_ptr, bInWhiteList](boost::system::error_code ec, std::size_t)
                         {
                             if (!ec)
                             {
                                 BOOST_LOG_TRIVIAL(info) << "Receive request from "
-                                    << self->m_socket.remote_endpoint().address().to_string() << ".";
+                                    << self->m_socket.remote_endpoint().address().to_string() << "."
+                                    << " IsWhileList: " << bInWhiteList;
                                 
                                 boost::system::error_code ignore_ec;
                                 self->m_socket.shutdown(boost_tcp::socket::shutdown_both, ignore_ec);
