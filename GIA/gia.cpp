@@ -97,7 +97,8 @@ namespace gia
             );
         
         boost::log::add_file_log(
-            boost::log::keywords::file_name = "log_%N.log",
+            boost::log::keywords::target = "log",
+            boost::log::keywords::file_name = "log/log_%Y%m%d_%H%M_%S.log",
             boost::log::keywords::rotation_size = 10 * 1024 * 1024,
             boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
             boost::log::keywords::format = "[%TimeStamp%] [%Severity%]: %Message%",
